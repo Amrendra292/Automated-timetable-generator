@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: smartsched
+      POSTGRES_USER: smartsched
+      POSTGRES_PASSWORD: smartsched_local_password
+    volumes:
+      - smartsched_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartsched -d smartsched"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://smartsched:smartsched_local_password@db:5432/smartsched
+      JWT_SECRET: smartsched-compose-local-secret-change-before-deploying-2026
+      JWT_EXPIRE_MINUTES: 720
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  smartsched_pgdata:
